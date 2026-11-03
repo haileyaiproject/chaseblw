@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>아기 BLW 30일 식단</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: one column, sticky day strip on top, today's two meal cards below, ingredient dictionary & guides as tabs */
+:root{
+  --bg:#fbf7f1; --card:#ffffff; --fg:#2b2622; --muted:#7a6f66; --line:#e8dfd4;
+  --accent:#d9743a; --accent-soft:#fbe9dc;
+  --iron:#8a2f3a; --iron-soft:#f6e2e5;
+  --alg:#2f6b8a; --alg-soft:#dfeef6;
+  --new:#4e7d3c; --new-soft:#e4f0dd;
+  --warn:#9a6a00; --warn-soft:#fff3cc;
+  --display:'Gowun Dodum',system-ui,sans-serif;
+  --body:'Noto Sans KR',system-ui,-apple-system,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#1d1916; --card:#272120; --fg:#f1ebe4; --muted:#b3a79c; --line:#3c332e;
+  --accent:#e8905a; --accent-soft:#3d2a1e;
+  --iron:#f0a0ab; --iron-soft:#3b2226;
+  --alg:#8dc4e3; --alg-soft:#1f3340;
+  --new:#9ccb86; --new-soft:#22331b;
+  --warn:#f0c860; --warn-soft:#3a3010;
+  color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#1d1916; --card:#272120; --fg:#f1ebe4; --muted:#b3a79c; --line:#3c332e;
+  --accent:#e8905a; --accent-soft:#3d2a1e;
+  --iron:#f0a0ab; --iron-soft:#3b2226;
+  --alg:#8dc4e3; --alg-soft:#1f3340;
+  --new:#9ccb86; --new-soft:#22331b;
+  --warn:#f0c860; --warn-soft:#3a3010;
+  color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:760px;margin:0 auto}
+header.top{padding-block:22px 10px}
+h1{font-family:var(--display);font-weight:400;font-size:28px;margin:0 0 4px;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--muted);font-size:14px;margin:0}
+.stats{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 6px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:0;flex:1 1 140px}
+.stat b{display:block;font-size:20px;font-family:var(--display);font-weight:400;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:10px 0 0;overflow-x:auto}
+nav.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 12px;font:inherit;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+nav.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:6px}
+.strip{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:5;padding:10px 0 8px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin}
+.strip button{flex:0 0 auto;width:52px;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:5px 0;font:inherit;cursor:pointer;color:var(--fg);line-height:1.2}
+.strip button small{display:block;font-size:10px;color:var(--muted)}
+.strip button b{font-weight:500;font-variant-numeric:tabular-nums}
+.strip button[aria-current="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.strip button.done::after{content:"";display:block;width:6px;height:6px;border-radius:50%;background:var(--new);margin:3px auto 0}
+.strip button.today b{color:var(--accent)}
+.dayhead{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:6px;margin:12px 0 6px}
+.dayhead h2{font-family:var(--display);font-weight:400;font-size:22px;margin:0}
+.dayhead .age{color:var(--muted);font-size:13px}
+.meal{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.meal h3{margin:0 0 6px;font-size:18px;font-family:var(--display);font-weight:400}
+.meal .when{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+.tag{font-size:12px;padding:3px 9px;border-radius:999px;font-weight:500}
+.tag.iron{background:var(--iron-soft);color:var(--iron)}
+.tag.alg{background:var(--alg-soft);color:var(--alg)}
+.tag.new{background:var(--new-soft);color:var(--new)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.chip{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:3px 9px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+.chip.isnew{border-color:var(--new);}
+.chip:hover,.chip:focus-visible{border-color:var(--accent);outline:none}
+.sec{margin:10px 0}
+.sec h4{margin:0 0 3px;font-size:13px;color:var(--muted);letter-spacing:.04em}
+.sec p,.sec ol{margin:0}
+.sec ol{padding-left:18px}
+.why li{margin:2px 0}
+.src{font-size:13px}
+.src a{color:var(--alg)}
+.track{border-top:1px dashed var(--line);margin-top:12px;padding-top:12px}
+.track .row{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
+.track .row label{font-size:13px;color:var(--muted);width:100%}
+.opt{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:5px 10px;font:inherit;font-size:13px;cursor:pointer;color:var(--fg)}
+.opt[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}
+textarea{width:100%;min-height:64px;border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit;font-size:14px;background:var(--bg);color:var(--fg);resize:vertical}
+.saveline{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:8px 16px;font:inherit;font-weight:500;cursor:pointer}
+.btn:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.status{font-size:13px;color:var(--muted)}
+.note{background:var(--warn-soft);color:var(--fg);border-left:3px solid var(--warn);padding:8px 12px;border-radius:0 8px 8px 0;font-size:14px;margin:10px 0}
+.panel{display:none}
+.panel.on{display:block}
+/* dictionary */
+.dict{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:12px}
+.ing{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}
+.ing h4{margin:0 0 4px;font-size:16px;font-family:var(--display);font-weight:400}
+.ing .nut{font-size:12px;color:var(--iron);font-weight:500}
+.ing p{margin:4px 0 0;font-size:13.5px}
+.ing .form{color:var(--muted)}
+.ing .cau{color:var(--warn)}
+.ing.known h4::after{content:"이미 먹어봄";font-size:11px;color:var(--muted);margin-left:6px;font-family:var(--body)}
+.filter{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+/* allergen table */
+table{border-collapse:collapse;width:100%;font-size:14px}
+.tw{overflow-x:auto;margin-top:10px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+td b{font-weight:500}
+.guide h3{font-family:var(--display);font-weight:400;font-size:20px;margin:18px 0 6px}
+.guide ul{padding-left:20px;margin:4px 0}
+.guide li{margin:3px 0}
+dialog{border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:14px;padding:18px;max-width:min(92vw,460px);font-family:var(--body)}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+dialog h4{margin:0 0 6px;font-family:var(--display);font-weight:400;font-size:20px}
+dialog .close{margin-top:12px}
+.summary{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:12px;font-size:14px}
+.summary ul{margin:4px 0 0;padding-left:18px}
+@media (prefers-reduced-motion:no-preference){.meal{transition:box-shadow .2s}.meal:hover{box-shadow:0 2px 10px rgba(0,0,0,.06)}}
+</style>
+</head>
+<body>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+const FIREBASE_CONFIG={
+  apiKey: "AIzaSyDhl7iO4pIOBxyeeGKlY2cn8K_tkQkFh4c",
+  authDomain: "chaesblw.firebaseapp.com",
+  projectId: "chaesblw",
+  storageBucket: "chaesblw.firebasestorage.app",
+  messagingSenderId: "784343454957",
+  appId: "1:784343454957:web:940914ab0e5f7ce68fe8e4"
+};
+</script>
+
+
+<div class="wrap">
+  <header class="top">
+    <h1>아기 BLW 30일 식단</h1>
+    <p class="sub" id="subline">자기주도이유식 · 하루 두 끼 · 한 끼는 철분 집중</p>
+    <div class="saveline" id="authbar" style="margin-top:10px"></div>
+    <div class="stats">
+      <div class="stat"><b id="st-day">–</b><span>오늘은 식단</span></div>
+      <div class="stat"><b id="st-age">–</b><span>생후 일수</span></div>
+      <div class="stat"><b id="st-new">–</b><span>새 재료 (30일)</span></div>
+      <div class="stat"><b id="st-logged">–</b><span>기록한 끼니</span></div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="plan">식단</button>
+      <button role="tab" aria-selected="false" data-tab="dict">재료 사전</button>
+      <button role="tab" aria-selected="false" data-tab="alg">알러젠 계획</button>
+      <button role="tab" aria-selected="false" data-tab="guide">안전 가이드</button>
+      <button role="tab" aria-selected="false" data-tab="log">기록 모아보기</button>
+    </nav>
+  </header>
+
+  <section class="panel on" id="panel-plan">
+    <p class="status" id="storeinfo" style="margin:8px 0 0">기록 저장 상태 확인 중…</p>
+    <div class="strip" id="strip"></div>
+    <div id="day"></div>
+  </section>
+
+  <section class="panel" id="panel-dict">
+    <p class="sub">재료를 누르면 왜 넣었는지, 어떤 영양이 풍부한지, 어떻게 주는지 볼 수 있어요. 식단 카드의 재료 칩을 눌러도 같은 설명이 뜹니다.</p>
+    <div class="filter" id="dictfilter"></div>
+    <div class="dict" id="dict"></div>
+  </section>
+
+  <section class="panel" id="panel-alg">
+    <div class="summary" id="algsum"></div>
+    <div class="tw"><table id="algtable"></table></div>
+  </section>
+
+  <section class="panel guide" id="panel-guide"></section>
+
+  <section class="panel" id="panel-log">
+    <p class="sub">저장한 기록을 날짜순으로 모아 보여줍니다.</p>
+    <div id="loglist"></div>
+  </section>
+</div>
+
+<dialog id="dlg"><div id="dlgbody"></div><button class="btn close" onclick="document.getElementById('dlg').close()">닫기</button></dialog>
+
+<script>
+const START="2026-11-04";      // 식단 1일째 날짜
+const DAY_AT_START=206;        // 1일째의 생후 일수 (11/3 = 205일)
+const KNOWN=["beef","pork","chicken","lamb","egg","celery","carrot","butternut","zucchini","radish","cinnamon","sweetpotato","potato","broccoli","avocado","yogurt"];
+
+// ---- 출처 ----
+const S={
+ ss_pb:{n:"Solid Starts · 땅콩",u:"https://solidstarts.com/foods/peanut/"},
+ ss_alg:{n:"Solid Starts · 알러젠 도입",u:"https://solidstarts.com/allergies-babies/"},
+ ss_algmeal:{n:"Solid Starts · 알러젠 식사 아이디어",u:"https://solidstarts.com/articles/meal-ideas-with-allergens/"},
+ ss_tahini:{n:"Solid Starts · 타히니",u:"https://solidstarts.com/foods/tahini/"},
+ ss_tofu:{n:"Solid Starts · 두부",u:"https://solidstarts.com/foods/tofu/"},
+ ss_salmon:{n:"Solid Starts · 연어",u:"https://solidstarts.com/foods/salmon/"},
+ ss_shrimp:{n:"Solid Starts · 새우",u:"https://solidstarts.com/foods/shrimp/"},
+ ss_liver:{n:"Solid Starts · 소간",u:"https://solidstarts.com/foods/beef-liver/"},
+ ss_lentil:{n:"Solid Starts · 렌틸콩",u:"https://solidstarts.com/foods/brown-lentils/"},
+ ss_beef:{n:"Solid Starts · 다진 소고기",u:"https://solidstarts.com/foods/ground-beef/"},
+ ss_meatball:{n:"Solid Starts · 미트볼",u:"https://solidstarts.com/foods/meatball/"},
+ ss_iron:{n:"Solid Starts · 철분 많은 음식 25",u:"https://solidstarts.com/articles/top-25-iron-rich-foods-for-babies-toddlers/"},
+ ss_size:{n:"Solid Starts · 안전한 크기·모양",u:"https://solidstarts.com/safe-food-sizes-shapes-for-babies/"},
+ ss_bolo:{n:"Solid Starts · 볼로네제",u:"https://solidstarts.com/articles/big-batch-bolognese-recipe-for-the-whole-family/"},
+ nhs_lamb:{n:"NHS · 양고기 스틱",u:"https://www.nhs.uk/best-start-in-life/baby/recipes-and-meal-ideas/tender-lamb-strips/"},
+ nhs_patty:{n:"NHS · 고구마 병아리콩 패티",u:"https://www.nhs.uk/best-start-in-life/baby/recipes-and-meal-ideas/sweet-potato-patties/"},
+ nhs_dhal:{n:"NHS · 달(렌틸 스튜)",u:"https://www.nhs.uk/best-start-in-life/baby/recipes-and-meal-ideas/delicious-dhal/"},
+ nhs_rec:{n:"NHS · 6개월 레시피 모음",u:"https://www.nhs.uk/best-start-in-life/baby/recipes-and-meal-ideas/"},
+ nhs_avoid:{n:"NHS · 피해야 할 음식",u:"https://www.nhs.uk/start-for-life/baby/weaning/safe-weaning/food-and-drinks-to-avoid/"},
+ na_iron:{n:"Nutrition Australia · 철분 첫 음식",u:"https://new.nutritionaustralia.org/resources/iron-rich-first-foods"},
+ ascia:{n:"ASCIA · 알러젠 도입 FAQ",u:"https://www.allergy.org.au/images/pc/ASCIA_PC_How_to_Introduce_Solid_Foods_FAQ_2024.pdf"},
+ kr_oat:{n:"만개의레시피 · 오트밀 팬케이크",u:"https://www.10000recipe.com/recipe/5617060"},
+ kr_rice:{n:"만개의레시피 · 핑거 주먹밥",u:"https://www.10000recipe.com/en/6899351/Finger_rice_balls_using_potato_peeler_Baby_food_between_review_"},
+ kr_alg:{n:"타리 · 알레르기 테스트",u:"https://baby.tali.kr/baby-food-allergy-testing"},
+ kr_yuga:{n:"육아크루 · 알레르기 가이드라인",u:"https://www.yugacrew.com/yugawiki/%EC%95%8C%EB%A0%88%EB%A5%B4%EA%B8%B0_%EA%B0%80%EC%9D%B4%EB%93%9C%EB%9D%BC%EC%9D%B8"},
+ kr_iron:{n:"육아크루 · 영유아 철분",u:"https://www.yugacrew.com/yugawiki/%EC%98%81%EC%9C%A0%EC%95%84_%EC%B2%A0%EB%B6%84"},
+ kr_salt:{n:"육아크루 · 무염 이유식",u:"https://www.yugacrew.com/yugawiki/%EB%AC%B4%EC%97%BC"},
+ kr_honey:{n:"식약처(뉴시스) · 돌 전 꿀 금지",u:"https://www.newsis.com/view/NISX20240131_0002611837"},
+ kr_fish:{n:"PHFE WIC · 생선 수은 안내(한국어)",u:"https://www.phfewic.org/Fish-Safety-Ko"},
+ kr_early:{n:"아주대병원 연구(에너지경제) · 알레르기 식품 조기 도입",u:"https://m.ekn.kr/view.php?key=176584"}
+};
+
+// ---- 재료 사전 ----
+const ING={
+ beef:{name:"소고기",group:"고기·생선",nut:["헴철(흡수 잘 되는 철분)","아연","단백질","비타민 B12"],why:"6개월부터 아기의 철분 필요량이 급격히 커져요. 소고기의 헴철은 식물성 철분보다 몇 배 잘 흡수돼요. 이가 없어도 스틱을 빨면서 육즙의 철분을 섭취할 수 있어요.",form:"어른 손가락 두 개 굵기의 긴 스틱(쪽쪽 빨기용), 또는 두부·감자를 섞어 부드럽게 만든 지름 5cm 이상 완자·패티.",cau:"작게 부순 다짐육을 그냥 주면 질식 위험. 반드시 뭉쳐서 주세요."},
+ pork:{name:"돼지고기",group:"고기·생선",nut:["철분","아연","비타민 B1"],why:"소고기와 다른 영양 조합(특히 비타민 B1)을 주고, 맛의 폭을 넓혀요.",form:"안심을 푹 삶아 스틱으로, 또는 다진 돼지고기를 두부와 섞어 완자로.",cau:"덩어리 살점이 떨어져 나오지 않도록 결 방향으로 길게."},
+ chicken:{name:"닭고기(허벅지살)",group:"고기·생선",nut:["철분(다리살이 가슴살보다 많음)","단백질","아연"],why:"닭 다리살은 가슴살보다 철분이 많고 촉촉해서 아기가 빨기 좋아요.",form:"껍질 벗긴 허벅지살을 푹 삶아 긴 스틱으로, 또는 잘게 찢어 매시에 섞어서.",cau:"뼈·연골 완전 제거."},
+ lamb:{name:"양고기",group:"고기·생선",nut:["헴철","아연","비타민 B12"],why:"NHS가 6개월 첫 고기로 추천하는 재료. 철분이 소고기만큼 풍부하고 부드러워요.",form:"스테이크를 완전히 익혀 손가락 길이 스틱으로.",cau:""},
+ liver:{name:"소간·닭간",group:"고기·생선",nut:["철분 최상위","비타민 A","비타민 B12","엽산"],why:"철분이 가장 농축된 식품 중 하나. 아주 조금만 넣어도 하루 철분에 큰 도움이 돼요.",form:"푹 익혀 곱게 갈아 파테로 만들어, 고구마·감자 매시나 완자에 1작은술 섞어서.",cau:"비타민 A가 매우 많아 1회 1작은술, 주 1~2회 이하. 처음엔 소아과에 한 번 물어보세요."},
+ egg:{name:"달걀",group:"유제품·달걀",nut:["철분(노른자)","콜린(두뇌 발달)","단백질","비타민 D"],why:"이미 3회 테스트 완료. 노른자에 철분·콜린이 많고, 전·팬케이크를 뭉치는 접착제 역할도 해요.",form:"완숙 오믈렛 스틱, 전 반죽, 삶은 노른자를 매시에 섞어서.",cau:"반숙 금지. 완전히 익혀 주세요."},
+ cod:{name:"대구(흰살생선)",group:"고기·생선",nut:["단백질","요오드","비타민 B12","DHA 소량"],why:"생선 알러젠 테스트의 첫 재료로 가장 순한 흰살생선. 수은이 낮아요.",form:"찐 뒤 가시를 완전히 발라 감자와 섞어 완자나 두툼한 전으로.",cau:"가시 반드시 확인. 소금 간 된 염장 대구 금지."},
+ salmon:{name:"연어",group:"고기·생선",nut:["DHA·오메가3","철분","비타민 D","단백질"],why:"두뇌 발달에 중요한 DHA가 풍부하고 철분도 있어요. 생선 테스트를 통과한 뒤 두 번째 생선으로.",form:"껍질·가시 제거 후 익혀 손가락 두 개 길이 스틱, 또는 고구마와 섞어 피시케이크로.",cau:"수은은 낮은 편. 훈제연어(염분)는 금지."},
+ mackerel:{name:"고등어",group:"고기·생선",nut:["DHA·오메가3","철분","비타민 D"],why:"국산 생선 중 DHA가 많고 수은이 낮은 편. 연어와 번갈아 주면 좋아요.",form:"구운 뒤 가시를 세심하게 제거하고 으깨 감자와 섞어 완자로.",cau:"자반고등어(염장) 금지. 잔가시 주의."},
+ shrimp:{name:"새우(선택)",group:"고기·생선",nut:["단백질","요오드","셀레늄"],why:"갑각류 알러젠. 해외 지침은 6개월부터 가능하다고 하지만 국내 자료는 돌 이후를 권하기도 해요. 소아과 상담 후 주세요.",form:"완전히 익혀 아주 잘게 다진 뒤 감자 매시에 섞거나, 큰 새우 패티로.",cau:"통새우·동그란 조각 금지. 소아과와 상의 후 진행."},
+ tofu:{name:"두부",group:"콩·두부",nut:["철분","칼슘","단백질","아연"],why:"대두 알러젠 테스트 재료이면서 철분·칼슘이 많은 식물성 단백질. 손에 쥐기 좋고 부드러워요.",form:"단단한 두부를 데쳐 손가락 두 개 굵기 스틱으로. 또는 완자 반죽에 섞어 부드럽게.",cau:"처음 테스트 땐 참깨·밀이 들어가지 않은 순두부·부침두부로."},
+ lentil:{name:"렌틸콩",group:"콩·두부",nut:["철분","엽산","식이섬유","단백질"],why:"식물성 철분이 매우 풍부해요. 비타민 C 채소(파프리카·브로콜리)와 함께 주면 흡수가 올라가요.",form:"푹 삶아 으깬 뒤 큰 패티로, 또는 매시에 섞어 숟가락에 얹어서.",cau:"통으로 주지 말고 반드시 으깨서."},
+ chickpea:{name:"병아리콩",group:"콩·두부",nut:["철분","단백질","식이섬유","엽산"],why:"NHS 고구마 패티의 핵심 재료. 철분·단백질을 보태고 패티를 뭉치게 해요.",form:"푹 삶아 으깨서 패티·후무스 형태로.",cau:"통 병아리콩은 질식 위험. 반드시 으깨서."},
+ blackbean:{name:"검은콩",group:"콩·두부",nut:["철분","단백질","안토시아닌"],why:"콩류 중에서도 철분이 많아요. 토마토와 짝지으면 비타민 C가 흡수를 도와요.",form:"푹 삶아 껍질째 으깨 매시로.",cau:"통으로 금지."},
+ pea:{name:"완두콩",group:"콩·두부",nut:["철분","단백질","비타민 C","식이섬유"],why:"철분과 비타민 C를 동시에 가진 드문 재료. 감자와 함께 매시로.",form:"푹 삶아 으깨서. 통 완두콩은 금지.",cau:"동그랗고 미끄러워 통으로 주면 질식 위험."},
+ edamame:{name:"풋콩(에다마메)",group:"콩·두부",nut:["단백질","철분","엽산"],why:"두부를 통과했다면 같은 대두 가족. 질감이 달라 새로운 경험이 돼요.",form:"푹 삶아 껍질 벗기고 으깨 매시로.",cau:"통으로 금지."},
+ oat:{name:"귀리(오트밀)",group:"곡물",nut:["철분","베타글루칸(식이섬유)","단백질"],why:"쌀보다 철분이 많고 비소 걱정이 적어요. 팬케이크·포리지의 기본 곡물로.",form:"물·분유로 되직하게 끓인 포리지를 숟가락에 얹거나, 곱게 갈아 팬케이크 스틱으로.",cau:"밀 테스트 전에는 글루텐프리 표기 귀리가 안전해요."},
+ wheat:{name:"밀가루(통밀)",group:"곡물",nut:["탄수화물","B군 비타민","(강화 밀가루) 철분"],why:"밀 알러젠 테스트 재료. 통과하면 토스트·파스타 등 손에 쥐기 좋은 음식이 크게 늘어요.",form:"달걀·분유와 섞어 얇은 팬케이크로 부쳐 손가락 폭 스틱으로.",cau:"시판 빵은 소금이 많으니 직접 만든 팬케이크로 테스트."},
+ pasta:{name:"파스타(무염)",group:"곡물",nut:["탄수화물","(밀) 단백질"],why:"밀 유지 섭취용. 푸실리·펜네는 작은 손에 쥐기 좋아요.",form:"무염으로 푹 삶아 손가락 길이 모양(펜네·푸실리)으로.",cau:"소금 넣지 않고 삶기. 작은 마카로니는 아직 금지."},
+ rice:{name:"밥(현미·수수 섞은 밥)",group:"곡물",nut:["탄수화물","(현미) 식이섬유·마그네슘"],why:"주식 경험. 쌀만 쓰면 비소 걱정이 있어 귀리·수수와 섞고 가끔만.",form:"푹 지은 밥을 으깬 감자와 섞어 손가락 모양 밥전·주먹밥으로.",cau:"흘러내리는 밥알은 질식 위험이 적지만 뭉쳐 주는 게 쥐기 좋아요."},
+ sorghum:{name:"수수",group:"곡물",nut:["철분","식이섬유","단백질"],why:"국산 잡곡 중 철분이 많아요. 밥에 섞어 새로운 곡물 경험.",form:"푹 불려 밥에 섞거나 가루로 전에.",cau:""},
+ sweetpotato:{name:"고구마",group:"채소",nut:["베타카로틴(비타민 A)","비타민 C","식이섬유"],why:"비타민 C가 철분 흡수를 도와요. 패티의 접착제 역할도 해요.",form:"쪄서 손가락 두 개 굵기 웨지로.",cau:""},
+ potato:{name:"감자",group:"채소",nut:["비타민 C","칼륨","탄수화물"],why:"완자·패티를 부드럽게 만들어 이 없는 아기도 잇몸으로 으깰 수 있게 해요.",form:"쪄서 으깨 반죽에 섞거나 웨지로.",cau:""},
+ butternut:{name:"버터넛 스쿼시",group:"채소",nut:["베타카로틴","비타민 C","칼륨"],why:"달콤해서 새 재료(타히니·땅콩버터)를 섞어 주기 좋은 베이스.",form:"쪄서 웨지 또는 매시.",cau:""},
+ kabocha:{name:"단호박",group:"채소",nut:["베타카로틴","비타민 C","식이섬유"],why:"11월 제철. 버터넛과 비슷하지만 더 포슬포슬해서 질감 경험이 달라요.",form:"껍질 벗기고 쪄서 웨지로.",cau:""},
+ zucchini:{name:"주키니(애호박)",group:"채소",nut:["비타민 C","칼륨","수분"],why:"부드럽고 순해 전·완자에 섞기 좋아요.",form:"찐 스틱 또는 갈아서 전 반죽에.",cau:""},
+ carrot:{name:"당근",group:"채소",nut:["베타카로틴","식이섬유"],why:"색과 단맛으로 식사의 재미를 더해요.",form:"포크로 쉽게 눌릴 만큼 푹 쪄서 스틱으로.",cau:"생당근 금지(질식)."},
+ broccoli:{name:"브로콜리",group:"채소",nut:["비타민 C","엽산","철분 소량","비타민 K"],why:"비타민 C가 철분 흡수를 도와 철분 끼니의 단짝. 줄기가 손잡이가 돼요.",form:"줄기 포함 송이째 푹 쪄서.",cau:""},
+ cauliflower:{name:"콜리플라워",group:"채소",nut:["비타민 C","엽산","식이섬유"],why:"브로콜리와 사촌. Nutrition Australia의 렌틸·콜리플라워 레시피 재료.",form:"송이째 푹 쪄서.",cau:""},
+ spinach:{name:"시금치",group:"채소",nut:["비식물성 철분","엽산","비타민 K","루테인"],why:"철분 끼니에 보조 철분 공급. 비타민 C 재료와 함께 주면 흡수 개선.",form:"데쳐서 곱게 다져 전·완자·오믈렛에 섞어서.",cau:"질산염이 많아 소량만, 데친 물은 버리기."},
+ cabbage:{name:"양배추",group:"채소",nut:["비타민 C","비타민 K","식이섬유"],why:"11월 제철. 푹 익히면 아주 부드러워 손에 쥐고 빨기 좋아요.",form:"잎을 푹 쪄서 둘둘 말아 스틱으로, 또는 다져 전에.",cau:"가스가 찰 수 있어 처음엔 소량."},
+ napa:{name:"배추",group:"채소",nut:["비타민 C","엽산","칼슘"],why:"한국 겨울 제철 채소. 속잎은 아주 부드러워요.",form:"노란 속잎을 푹 쪄서 스틱 또는 다져서 전에.",cau:""},
+ radish:{name:"무",group:"채소",nut:["비타민 C","소화효소"],why:"국물 요리의 기본 채소. 푹 익히면 달고 부드러워요.",form:"푹 쪄서 스틱으로.",cau:""},
+ beet:{name:"비트",group:"채소",nut:["엽산","철분 소량","질산염(혈류 개선)"],why:"선명한 색과 흙내음 — 새로운 맛 경험. 변·소변이 붉어질 수 있는데 정상이에요.",form:"푹 쪄서 스틱 또는 갈아 전에.",cau:"시금치처럼 질산염이 있어 소량."},
+ paprika:{name:"파프리카(빨강)",group:"채소",nut:["비타민 C 최상위","베타카로틴"],why:"비타민 C가 가장 많은 채소 중 하나. 렌틸·콩 끼니의 철분 흡수를 끌어올려요.",form:"구워 껍질 벗기고 긴 스틱으로.",cau:"껍질은 질겨서 벗겨 주세요."},
+ tomato:{name:"토마토",group:"채소",nut:["비타민 C","라이코펜","칼륨"],why:"비타민 C로 콩·고기의 철분 흡수를 돕고 산미로 맛의 폭을 넓혀요.",form:"껍질·씨 제거 후 익혀 소스로, 또는 큰 웨지로.",cau:"방울토마토 통째 금지. 입 주위가 붉어질 수 있어요(산 때문, 알레르기 아님)."},
+ mushroom:{name:"표고버섯",group:"채소",nut:["비타민 D","식이섬유","감칠맛"],why:"감칠맛으로 무염 요리를 맛있게 해요.",form:"푹 익혀 곱게 다져 완자·전에.",cau:"통으로 주면 질겨요."},
+ eggplant:{name:"가지",group:"채소",nut:["식이섬유","안토시아닌"],why:"푹 익히면 아주 부드러워 잇몸으로도 쉽게 으깨져요.",form:"껍질 벗겨 쪄서 두툼한 스틱으로.",cau:""},
+ greenbean:{name:"그린빈(줄기콩)",group:"채소",nut:["비타민 K","엽산","식이섬유"],why:"손잡이처럼 생겨 쥐기 좋고 새로운 질감.",form:"푹 쪄서 통째로.",cau:""},
+ onion:{name:"양파·마늘(양념용)",group:"양념",nut:["풍미"],why:"소금 없이 요리에 깊은 맛을 내요. 푹 익혀 소량.",form:"잘게 다져 완자·소스에.",cau:"생으로 금지."},
+ oliveoil:{name:"올리브유",group:"양념",nut:["지방(에너지·지용성 비타민 흡수)"],why:"아기는 지방이 많이 필요해요. 채소의 비타민 A 흡수도 도와요.",form:"조리에 소량.",cau:""},
+ cinnamon:{name:"시나몬",group:"양념",nut:["풍미"],why:"단맛 없이 향으로 맛을 바꿔요.",form:"과일·오트밀에 아주 조금.",cau:""},
+ perilla:{name:"들깨가루",group:"견과·씨앗",nut:["오메가3(ALA)","칼슘"],why:"한국식 오메가3 공급원. 들깨는 참깨와 다른 식물이라 알러젠은 아니에요.",form:"곱게 간 가루를 매시·전에 섞어서.",cau:"통들깨 금지."},
+ avocado:{name:"아보카도",group:"과일",nut:["불포화지방","엽산","칼륨"],why:"땅콩버터·타히니 같은 새 알러젠을 섞어 주기 가장 좋은 부드러운 베이스.",form:"잘 익은 것을 웨지 또는 매시로.",cau:""},
+ banana:{name:"바나나",group:"과일",nut:["칼륨","비타민 B6","탄수화물"],why:"손에 쥐기 좋고 새 재료를 섞기 좋아요.",form:"껍질을 절반만 벗겨 손잡이로, 또는 세로로 길게.",cau:"동그란 조각 금지. 너무 익지 않은 것은 미끄러워요."},
+ pear:{name:"배",group:"과일",nut:["비타민 C","식이섬유","수분"],why:"11월 제철. 변비 예방에도 좋아요.",form:"껍질 벗겨 푹 쪄서 웨지로.",cau:"생배는 단단해 금지."},
+ apple:{name:"사과",group:"과일",nut:["비타민 C","식이섬유","펙틴"],why:"쪄서 주면 부드럽고 달콤. 시나몬과 짝.",form:"껍질 벗겨 쪄서 웨지, 또는 무가당 애플소스.",cau:"생사과 금지(질식)."},
+ blueberry:{name:"블루베리",group:"과일",nut:["비타민 C","안토시아닌"],why:"오트밀의 철분 흡수를 돕는 비타민 C 과일.",form:"으깨거나 납작하게 눌러 포리지·요거트에.",cau:"통으로 절대 금지(질식)."},
+ tangerine:{name:"귤",group:"과일",nut:["비타민 C","엽산"],why:"겨울 제철. 비타민 C가 철분 흡수를 도와요.",form:"속껍질까지 벗기고 으깨 매시에.",cau:"입 주위 붉어짐은 산 때문일 수 있어요."},
+ kiwi:{name:"키위",group:"과일",nut:["비타민 C 최상위","식이섬유"],why:"작은 양으로 비타민 C를 많이 줘요.",form:"껍질 벗겨 웨지 또는 으깨서.",cau:"입 주위 붉어질 수 있음."},
+ mango:{name:"망고",group:"과일",nut:["비타민 A","비타민 C"],why:"새로운 단맛·향. 손에 쥐기 좋은 질감.",form:"잘 익은 것을 긴 웨지로.",cau:"미끄러우면 겉에 오트가루를 묻혀요."},
+ persimmon:{name:"홍시",group:"과일",nut:["비타민 A","비타민 C"],why:"11월 한국 제철 과일. 완숙 홍시는 아주 부드러워요.",form:"껍질 벗겨 숟가락에 얹거나 큰 웨지로.",cau:"떫은 감·단단한 단감은 금지. 처음엔 소량."},
+ chestnut:{name:"밤",group:"과일",nut:["탄수화물","비타민 C","식이섬유"],why:"가을 제철. 견과류로 분류되지만 알러젠 견과와는 달라요.",form:"푹 삶아 곱게 으깨 매시로.",cau:"통밤·조각 절대 금지(질식)."},
+ yogurt:{name:"플레인 요거트",group:"유제품·달걀",nut:["칼슘","단백질","유산균"],why:"이미 2회 테스트. 새 알러젠(타히니·견과 버터)을 섞어 주기 좋은 베이스.",form:"무가당 플레인을 숟가락에 미리 얹어 주기.",cau:"가당·과일맛 요거트 금지."},
+ ricotta:{name:"리코타·무염 코티지치즈",group:"유제품·달걀",nut:["칼슘","단백질"],why:"요거트 다음 유제품 경험. 짜지 않은 치즈만.",form:"전·팬케이크에 섞거나 매시에.",cau:"일반 치즈는 염분이 높아 아직 금지."},
+ peanut:{name:"땅콩버터",group:"견과·씨앗",nut:["단백질","건강한 지방","철분","니아신"],why:"가장 중요한 알러젠 테스트. 조기 도입이 땅콩 알레르기 예방에 효과적이라는 근거가 있어요.",form:"무가당·무염 부드러운 땅콩버터 1/4작은술을 물·분유로 묽게 풀어 아보카도·오트밀에 섞어서.",cau:"되직한 땅콩버터 단독으로 금지(질식). 꿀 들어간 제품 금지."},
+ sesame:{name:"참깨(타히니)",group:"견과·씨앗",nut:["철분","칼슘","건강한 지방"],why:"참깨 알러젠 테스트 재료. 타히니는 철분·칼슘이 많아 테스트 후에도 철분 끼니에 유용해요.",form:"타히니 1/8작은술을 물로 묽게 풀어 요거트·매시에 섞어서.",cau:"통깨 금지. 국산 참깨를 곱게 갈아 기름과 섞어 직접 만들어도 돼요."},
+ almond:{name:"아몬드버터",group:"견과·씨앗",nut:["비타민 E","칼슘","건강한 지방"],why:"견과류는 종류별로 따로 테스트해요. 첫 견과로 아몬드.",form:"무가당 아몬드버터를 묽게 풀어 오트밀·요거트에.",cau:"통아몬드·조각 절대 금지."},
+ cashew:{name:"캐슈버터",group:"견과·씨앗",nut:["철분","아연","마그네슘"],why:"견과류 중 철분·아연이 많은 편. 두 번째 견과 테스트.",form:"묽게 풀어 매시·소스에.",cau:"통캐슈 금지."},
+ walnut:{name:"호두(간 것)",group:"견과·씨앗",nut:["오메가3(ALA)","항산화물"],why:"두뇌 발달에 좋은 오메가3 식물성 공급원. 세 번째 견과 테스트.",form:"곱게 갈아 가루로 요거트·오트밀에.",cau:"통호두·조각 금지."},
+ pinenut:{name:"잣(간 것)",group:"견과·씨앗",nut:["철분","아연","건강한 지방"],why:"한국에서 흔한 견과. 잣죽처럼 곱게 갈아 쓰면 안전해요.",form:"곱게 갈아 포리지·매시에.",cau:"통잣 금지."},
+ seaweed:{name:"미역",group:"해조류",nut:["요오드","칼슘","식이섬유"],why:"한국 식탁의 기본. 요오드는 갑상선·두뇌 발달에 필요하지만 과하면 안 좋아 소량만.",form:"불려서 푹 끓인 뒤 곱게 다져 전·완자에.",cau:"소량(1작은술 정도). 긴 가닥은 질식 위험."},
+ laver:{name:"무염 김",group:"해조류",nut:["요오드","철분 소량","비타민 B12"],why:"손에 쥐기 좋고 맛이 강해 흥미를 끌어요.",form:"구운 무염 김을 잘게 부숴 밥전·매시에 섞어서.",cau:"통김은 입천장에 달라붙어 위험. 반드시 부숴서."}
+};
+
+// ---- 30일 식단 ----
+const PLAN=[
+ {meals:[
+  {t:"아침 · 알러젠",name:"땅콩버터 아보카도 매시 + 삶은 달걀노른자",ing:["peanut","avocado","egg"],iron:false,alg:"땅콩 1회차",algHow:"부드러운 땅콩버터 1/4작은술을 물로 묽게 풀어 아보카도 매시에 섞어요. 2시간 지켜보기.",why:["땅콩은 가장 먼저 도입할 알러젠. 조기 도입이 알레르기 예방에 효과적이라는 연구가 근거예요.","아보카도는 이미 먹어본 재료라 반응이 나면 땅콩 때문임을 알 수 있어요.","달걀노른자로 철분·콜린을 보태요."],how:["땅콩버터 1/4작은술에 따뜻한 물 1작은술을 넣어 흐를 정도로 풀어요.","아보카도 1/4개를 으깨 땅콩버터를 섞어요.","완숙 달걀노른자를 으깨 옆에 함께 담아요. 숟가락에 얹어 주거나 아보카도 웨지에 발라 주세요."],tip:"오전에 주고 2시간은 얼굴·몸을 관찰해요. 감기 기운이 있거나 예방접종 당일은 하루 미뤄요.",src:[S.ss_pb,S.ascia,S.kr_early]},
+  {t:"점심 · 철분",name:"소고기 스틱 + 찐 브로콜리 + 고구마 웨지",ing:["beef","broccoli","sweetpotato","oliveoil"],iron:true,alg:null,why:["소고기 스틱은 이가 없어도 빨면서 헴철을 섭취해요.","브로콜리·고구마의 비타민 C가 철분 흡수를 높여요."],how:["소고기 홍두깨살을 손가락 두 개 굵기, 손가락 길이로 썰어요.","올리브유 살짝 두르고 속까지 완전히 익혀요. 겉이 마르면 물 2큰술 넣고 뚜껑 덮어 5분 더.","브로콜리·고구마는 포크로 쉽게 눌릴 때까지 쪄요."],tip:"스틱 끝이 주먹 밖으로 나오게 길게. 살점을 못 삼켜도 괜찮아요 — 육즙이 목표예요.",src:[S.ss_iron,S.ss_size,S.nhs_lamb]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"땅콩버터 오트밀 포리지 + 바나나",ing:["peanut","oat","banana"],iron:false,alg:"땅콩 2회차",algHow:"어제 괜찮았다면 1/2작은술로 늘려 오트밀에 섞어요.",why:["땅콩 두 번째 노출. 3회까지 마쳐야 도입이 끝나요.","귀리는 쌀보다 철분이 많고 비소 걱정이 적어 아침 곡물로 좋아요.","바나나는 손에 쥐기 좋은 첫 과일."],how:["귀리 2큰술을 물 또는 분유 1/2컵에 넣고 되직해질 때까지 5분 끓여요.","땅콩버터 1/2작은술을 물로 풀어 섞어요.","바나나는 껍질을 절반만 벗겨 손잡이처럼 주거나 세로로 길게 잘라요."],tip:"포리지는 숟가락에 미리 얹어 아기 앞에 두면 스스로 집어요(프리로드 스푼).",src:[S.ss_pb,S.kr_oat,S.ss_iron]},
+  {t:"점심 · 철분",name:"소고기 두부 완자 + 찐 당근",ing:["beef","potato","carrot","onion"],iron:true,alg:null,why:["다진 소고기를 감자로 부드럽게 뭉치면 잇몸으로 으깰 수 있는 철분 끼니가 돼요.","완자는 지름 5cm 이상으로 커야 통째로 삼킬 수 없어 안전해요."],how:["다진 소고기 50g + 찐 감자 으깬 것 30g + 푹 볶은 양파 다진 것 1큰술을 섞어요.","아기 주먹보다 큰 납작한 패티 모양으로 빚어요.","팬에 약불로 양면 각 4분, 속까지 익혀요(71°C). 손가락으로 눌러 쉽게 뭉개지면 OK.","당근은 푹 쪄서 스틱으로."],tip:"남은 완자는 냉동해 두면 이번 달 내내 써요.",src:[S.ss_beef,S.ss_meatball,S.ss_size]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"땅콩버터 버터넛 매시 + 찐 배 웨지",ing:["peanut","butternut","pear"],iron:false,alg:"땅콩 3회차",algHow:"1작은술을 풀어 버터넛 매시에. 오늘까지 괜찮으면 땅콩 도입 완료 → 이후 주 2회 유지.",why:["땅콩 도입 마무리 회차.","배는 11월 제철 과일. 쪄서 주면 부드럽고 변비 예방에도 좋아요."],how:["버터넛 스쿼시를 쪄서 으깨고 묽게 푼 땅콩버터 1작은술을 섞어요.","배는 껍질 벗겨 손가락 굵기로 썰어 5분 쪄요."],tip:"배 웨지는 미끄러우면 겉에 오트가루를 묻혀요.",src:[S.ss_pb,S.ss_alg]},
+  {t:"점심 · 철분",name:"양고기 스틱(NHS) + 찐 주키니",ing:["lamb","zucchini","oliveoil"],iron:true,alg:null,why:["NHS가 6개월 첫 고기로 권하는 레시피. 양고기는 헴철·아연이 풍부해요.","주키니는 이미 먹어본 순한 채소."],how:["양고기 스테이크의 지방을 떼고 올리브유 살짝 둘러 양면 6분씩, 분홍빛이 없을 때까지 익혀요.","손가락 길이·두 손가락 굵기 스틱으로 썰어요.","주키니는 스틱으로 쪄요."],src:[S.nhs_lamb,S.ss_iron]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"밀가루 달걀 팬케이크 스틱 + 사과 애플소스",ing:["wheat","egg","apple","cinnamon"],iron:false,alg:"밀 1회차",algHow:"통밀가루로 만든 얇은 팬케이크를 손가락 폭 스틱 1~2개부터. 시판 빵은 소금이 많아 직접 부쳐요.",why:["밀 알러젠 테스트. 통과하면 토스트·파스타 등 쥐기 좋은 음식이 크게 늘어요.","달걀·사과·시나몬은 이미 먹어본 재료라 반응을 구분할 수 있어요."],how:["통밀가루 3큰술 + 달걀 1개 + 분유 3큰술을 섞어 묽은 반죽을 만들어요.","약불 팬에 얇게 부쳐 손가락 폭·길이로 잘라요.","사과는 껍질 벗겨 푹 쪄서 으깨고 시나몬을 살짝."],src:[S.ss_alg,S.ss_algmeal,S.kr_oat]},
+  {t:"점심 · 철분",name:"닭 허벅지살 스틱 + 단호박 웨지",ing:["chicken","kabocha","oliveoil"],iron:true,alg:null,why:["닭 다리살은 가슴살보다 철분이 많고 촉촉해서 빨기 좋아요.","단호박은 11월 제철. 비타민 C·베타카로틴이 많아요."],how:["껍질 벗긴 닭 허벅지살을 물에 넣고 20분 푹 삶아요.","결 방향으로 긴 스틱으로 썰어요.","단호박은 껍질 벗기고 손가락 굵기로 쪄요."],src:[S.ss_iron,S.ss_size]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"무염 펜네 파스타 + 땅콩버터 소스",ing:["pasta","peanut","yogurt"],iron:false,alg:"밀 2회차",algHow:"무염으로 푹 삶은 펜네 3~4개. 땅콩은 유지 섭취(주 2회).",why:["밀 두 번째 노출. 파스타는 손에 쥐기 좋은 모양.","땅콩버터를 요거트에 섞어 소스로 — 땅콩 유지 섭취를 겸해요."],how:["펜네를 소금 없이 포장 시간보다 3분 더 푹 삶아요.","땅콩버터 1작은술을 물로 풀고 플레인 요거트 2큰술과 섞어 파스타에 버무려요."],tip:"펜네를 손가락 두 개 길이로 잡고 빨아 먹는 걸 즐겨요. 미끄러우면 소스를 조금 더.",src:[S.ss_algmeal,S.ss_pb]},
+  {t:"점심 · 철분",name:"렌틸 고구마 패티 + 찐 파프리카 스틱",ing:["lentil","sweetpotato","paprika","egg"],iron:true,alg:null,why:["렌틸콩은 식물성 철분이 매우 풍부해요.","파프리카는 비타민 C 최상위 채소라 렌틸의 철분 흡수를 끌어올려요(Solid Starts 추천 조합)."],how:["붉은 렌틸 1/2컵을 물 1.5컵에 15분 푹 삶아 으깨요.","찐 고구마 으깬 것 1/2컵, 달걀 1개와 섞어 큰 패티로 빚어 약불에 양면 3분씩 구워요.","파프리카는 오븐이나 팬에 구워 껍질을 벗기고 긴 스틱으로."],src:[S.ss_lentil,S.nhs_patty,S.ss_iron]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"통밀 토스트 스틱 + 땅콩버터 얇게 + 블루베리 요거트",ing:["wheat","peanut","yogurt","blueberry"],iron:false,alg:"밀 3회차",algHow:"오늘까지 괜찮으면 밀 도입 완료. 무염·무설탕 빵이 없으면 어제 팬케이크 반죽으로 대신.",why:["밀 도입 마무리.","블루베리는 비타민 C 과일, 으깨서 요거트에."],how:["무염 통밀빵(없으면 집에서 부친 팬케이크)을 살짝 구워 손가락 폭 스틱으로.","묽게 푼 땅콩버터를 아주 얇게 발라요.","블루베리는 납작하게 눌러 으깨 요거트에 섞어요."],src:[S.ss_alg,S.nhs_avoid]},
+  {t:"점심 · 철분",name:"소고기 스틱 + 찐 콜리플라워 + 감자 웨지",ing:["beef","cauliflower","potato"],iron:true,alg:null,why:["소고기 헴철 반복.","콜리플라워는 비타민 C가 많아 흡수를 돕고, 송이가 손잡이가 돼요."],how:["소고기 스틱은 1일째와 같은 방법.","콜리플라워·감자는 포크로 쉽게 눌릴 때까지 쪄요."],src:[S.ss_iron,S.na_iron]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"타히니 요거트 + 찐 배",ing:["sesame","yogurt","pear"],iron:false,alg:"참깨 1회차",algHow:"타히니 1/8작은술을 물로 아주 묽게 풀어 요거트에 섞어요. 2시간 관찰.",why:["참깨는 국내 식탁에 흔해 일찍 확인해 두면 좋은 알러젠.","타히니는 철분·칼슘이 많아 테스트 후에도 유용해요."],how:["타히니 1/8작은술 + 물 1/2작은술을 섞어 흐르게 만들어요.","플레인 요거트 2큰술에 섞어 숟가락에 얹어 줘요.","배 웨지는 쪄서."],tip:"타히니가 없으면 볶은 참깨를 곱게 갈아 올리브유와 섞어 직접 만들어도 돼요.",src:[S.ss_tahini,S.ascia]},
+  {t:"점심 · 철분",name:"돼지고기 두부 완자 + 찐 양배추 롤",ing:["pork","potato","cabbage","mushroom"],iron:true,alg:null,why:["돼지고기는 비타민 B1이 특히 풍부해요.","양배추·표고는 11월 제철, 감칠맛으로 무염 요리가 맛있어져요."],how:["다진 돼지고기 50g + 찐 감자 으깬 것 30g + 푹 익혀 다진 표고 1큰술을 섞어 큰 패티로.","약불에 양면 4분씩 속까지 익혀요.","양배추 잎을 푹 쪄서 둘둘 말아 손가락 굵기 롤로."],src:[S.ss_meatball,S.ss_iron]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"타히니 바나나 오트밀",ing:["sesame","oat","banana"],iron:false,alg:"참깨 2회차",algHow:"1/4작은술로 늘려요.",why:["참깨 두 번째 노출.","귀리 철분 + 타히니 철분이 더해진 아침."],how:["오트밀 포리지를 끓이고 묽게 푼 타히니 1/4작은술을 섞어요.","바나나를 으깨 넣거나 세로 스틱으로 곁들여요."],src:[S.ss_tahini,S.ss_algmeal]},
+  {t:"점심 · 철분",name:"닭 허벅지살 병아리콩 매시 + 찐 브로콜리",ing:["chicken","chickpea","broccoli","oliveoil"],iron:true,alg:null,why:["닭 다리살 철분 + 병아리콩 철분을 한 그릇에.","브로콜리 비타민 C로 흡수 보조."],how:["닭 허벅지살을 푹 삶아 잘게 찢어요.","병아리콩(무염 통조림 또는 푹 삶은 것)을 올리브유 조금과 함께 곱게 으깨요.","둘을 섞어 숟가락에 얹어 주고, 브로콜리는 쪄서 송이째."],src:[S.nhs_patty,S.ss_iron]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"타히니 고구마 매시 + 귤",ing:["sesame","sweetpotato","tangerine"],iron:false,alg:"참깨 3회차",algHow:"1/2작은술. 오늘까지 괜찮으면 참깨 도입 완료 → 주 2회 유지.",why:["참깨 도입 마무리.","귤은 제철 비타민 C 과일. 입 주위가 살짝 붉어지면 산 때문일 수 있어요."],how:["고구마를 쪄서 으깨고 묽게 푼 타히니를 섞어요.","귤은 속껍질까지 벗기고 으깨 매시에 조금 섞어요."],src:[S.ss_tahini,S.ss_alg]},
+  {t:"점심 · 철분",name:"소간 파테 1작은술 넣은 소고기 완자 + 찐 당근",ing:["liver","beef","potato","carrot","onion"],iron:true,alg:null,why:["소간은 철분이 가장 농축된 식품. 완자 반죽에 1작은술만 넣어도 하루 철분에 큰 도움이 돼요.","비타민 A가 많아 1회 1작은술, 주 1~2회만."],how:["소간 30g을 우유 대신 물에 20분 담가 핏물을 빼고, 푹 삶아 곱게 갈아 파테를 만들어요(나머지는 1작은술씩 냉동).","다진 소고기 50g + 찐 감자 30g + 파테 1작은술 + 익힌 양파를 섞어 큰 패티로 구워요.","당근은 푹 쪄서 스틱."],tip:"처음 간을 쓸 때는 소아과에 한 번 물어보면 안심이에요.",src:[S.ss_liver,S.ss_meatball]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"두부 스틱 + 아보카도 웨지",ing:["tofu","avocado"],iron:false,alg:"대두 1회차",algHow:"참깨·밀이 들어가지 않은 부침두부를 데쳐 스틱 1~2개. 2시간 관찰.",why:["대두 알러젠 테스트. 두부는 철분·칼슘이 많아 통과하면 철분 끼니의 단골이 돼요.","아보카도는 익숙한 재료."],how:["부침두부를 손가락 두 개 굵기·길이로 썰어 끓는 물에 2분 데쳐요.","기름 없이 팬에 살짝 구우면 표면이 단단해져 쥐기 좋아요.","아보카도 웨지 곁들여요."],src:[S.ss_tofu,S.ascia]},
+  {t:"점심 · 철분",name:"NHS 고구마 병아리콩 패티 + 찐 그린빈",ing:["sweetpotato","chickpea","egg","onion","greenbean"],iron:true,alg:null,why:["NHS 공식 6개월 레시피(향신료만 뺐어요). 병아리콩 철분 + 고구마 비타민 C.","그린빈은 손잡이 모양이라 쥐기 좋은 새 채소."],how:["고구마 1개를 삶아 으깨고 병아리콩(무염) 1/2컵과 함께 으깨요.","푹 볶은 양파·달걀 1개를 섞어 큰 패티로 빚어 약불에 2분씩 양면 구워요.","그린빈은 푹 쪄서 통째로."],tip:"15개 정도 나오니 냉동해 두세요.",src:[S.nhs_patty]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"두부 달걀 스크램블 + 찐 사과",ing:["tofu","egg","apple","cinnamon"],iron:false,alg:"대두 2회차",algHow:"두부 양을 2배로.",why:["대두 두 번째. Solid Starts 알러젠 식사 아이디어(으깬 두부 스크램블).","달걀 노른자 철분 보너스."],how:["두부 1/4모를 으깨 달걀 1개와 섞어 약불에 완전히 익혀 덩어리로 뭉쳐요.","손가락 크기로 잘라요. 사과는 쪄서 웨지로."],src:[S.ss_algmeal,S.ss_tofu]},
+  {t:"점심 · 철분",name:"양고기 스틱 + 비트 스틱 + 감자",ing:["lamb","beet","potato"],iron:true,alg:null,why:["양고기 헴철 반복.","비트는 새로운 색과 맛. 변·소변이 붉게 나올 수 있는데 정상이에요."],how:["양고기 스틱은 3일째 방법.","비트는 껍질 벗겨 손가락 굵기로 25분 푹 쪄요. 감자도 함께."],src:[S.nhs_lamb,S.ss_iron]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"두부 오트 팬케이크 + 땅콩버터",ing:["tofu","oat","egg","peanut"],iron:false,alg:"대두 3회차",algHow:"오늘까지 괜찮으면 대두 도입 완료. 땅콩은 유지 섭취.",why:["대두 마무리 + 땅콩 유지(주 2회).","오트·달걀·두부로 단백질·철분이 꽉 찬 팬케이크."],how:["귀리 3큰술 간 것 + 으깬 두부 3큰술 + 달걀 1개를 섞어 약불에 얇게 부쳐 스틱으로.","묽게 푼 땅콩버터를 얇게 발라요."],src:[S.kr_oat,S.ss_algmeal]},
+  {t:"점심 · 철분",name:"소고기 토마토 소스 펜네(볼로네제식) + 찐 주키니",ing:["beef","tomato","pasta","onion","zucchini"],iron:true,alg:null,why:["Solid Starts 무염 볼로네제 아이디어. 토마토 비타민 C가 소고기 철분 흡수를 도와요.","파스타로 밀 유지 섭취."],how:["다진 소고기 50g을 다진 양파와 볶고 껍질·씨 제거한 토마토 1개를 으깨 넣어 20분 뭉근히 끓여요.","무염 펜네를 푹 삶아 소스에 버무려요(소고기가 소스에 잘게 들어가 안전).","주키니 스틱 곁들여요."],src:[S.ss_bolo,S.ss_iron]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"대구 감자 완자 + 찐 배",ing:["cod","potato","pear"],iron:false,alg:"생선 1회차",algHow:"가시 없는 대구살 1작은술을 감자와 섞은 완자로. 2시간 관찰.",why:["생선 알러젠 테스트를 가장 순한 흰살생선으로. 수은이 낮아요.","국내 연구(아주대)는 생선도 4~6개월부터 도입을 권해요."],how:["대구살을 쪄서 가시를 꼼꼼히 발라 으깨요.","찐 감자 으깬 것과 3:1로 섞어 큰 완자로 빚어 약불에 구워요.","배는 쪄서 웨지."],src:[S.ss_salmon,S.kr_early,S.kr_fish]},
+  {t:"점심 · 철분",name:"렌틸 달(NHS) + 찐 브로콜리 + 밥전",ing:["lentil","onion","broccoli","rice","sorghum"],iron:true,alg:null,why:["NHS 달 레시피(향신료 제외). 렌틸 철분을 숟가락으로.","수수를 섞은 밥전으로 첫 곡물 밥 경험 — 쌀만 쓰지 않아 비소 걱정을 줄여요."],how:["렌틸 1/4컵을 물 1컵에 양파와 함께 20분 푹 끓여 으깨요.","수수 1:쌀 3 비율로 지은 밥을 으깬 감자와 섞어 손가락 모양으로 빚어 약불에 살짝 구워요.","브로콜리는 쪄서."],src:[S.nhs_dhal,S.kr_rice,S.nhs_avoid]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"대구 고구마 피시케이크 + 요거트",ing:["cod","sweetpotato","yogurt"],iron:false,alg:"생선 2회차",algHow:"생선 양 2배.",why:["생선 두 번째 노출.","고구마가 케이크를 부드럽게 뭉쳐요."],how:["찐 대구살(가시 제거) + 찐 고구마를 1:1로 으깨 큰 패티로 구워요.","플레인 요거트를 찍어 먹도록 곁들여요."],src:[S.ss_salmon]},
+  {t:"점심 · 철분",name:"돼지고기 안심 스틱 + 찐 단호박 + 시금치 달걀전",ing:["pork","kabocha","spinach","egg"],iron:true,alg:null,why:["돼지고기 철분 + 시금치 식물성 철분. 단호박 비타민 C로 흡수 보조.","시금치는 질산염 때문에 소량, 데친 물은 버려요."],how:["돼지 안심을 푹 삶아 결대로 긴 스틱으로.","시금치 한 줌을 데쳐 물기 짜고 곱게 다져 달걀 1개에 섞어 두툼하게 부쳐 스틱으로.","단호박 웨지 쪄요."],src:[S.ss_iron,S.nhs_rec]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"연어 스틱 + 아보카도 매시",ing:["salmon","avocado"],iron:true,alg:"생선 3회차",algHow:"대구가 괜찮았으면 오늘은 연어로 3회차 마무리. 이후 생선 주 2~3회.",why:["연어는 DHA·철분·비타민 D가 많아 두뇌·혈액에 모두 좋아요.","생선 도입 마무리."],how:["연어 껍질·가시를 제거하고 쪄서 손가락 두 개 길이 스틱으로.","아보카도 매시 곁들여요."],src:[S.ss_salmon,S.ss_iron]},
+  {t:"점심",name:"검은콩 토마토 매시 + 감자 웨지",ing:["blackbean","tomato","potato","oliveoil"],iron:false,alg:null,why:["검은콩 철분 + 토마토 비타민 C(Solid Starts 추천 조합).","새로운 콩 경험."],how:["검은콩을 푹 삶아(또는 무염 통조림) 익힌 토마토와 함께 곱게 으깨요.","올리브유 조금 섞어 숟가락에. 감자 웨지 곁들여요."],src:[S.ss_iron,S.na_iron]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"아몬드버터 오트밀 + 으깬 블루베리",ing:["almond","oat","blueberry"],iron:false,alg:"아몬드 1회차",algHow:"아몬드버터 1/4작은술 묽게 풀어 오트밀에. 견과류는 종류별로 따로 테스트해요.",why:["견과류는 아몬드·캐슈·호두가 서로 다른 알러젠이라 하나씩 확인해요.","오트 철분 + 블루베리 비타민 C."],how:["오트밀 포리지에 묽게 푼 아몬드버터를 섞어요.","블루베리를 눌러 으깨 올려요."],src:[S.ss_algmeal,S.ascia]},
+  {t:"점심 · 철분",name:"소고기 스틱 + 두부 스틱 + 찐 파프리카",ing:["beef","tofu","paprika"],iron:true,alg:null,why:["소고기 헴철 + 두부 식물성 철분 + 파프리카 비타민 C — 철분 흡수 최적 조합.","두부 유지 섭취."],how:["소고기 스틱(1일째 방법), 두부 스틱(10일째 방법).","파프리카는 구워 껍질 벗겨 스틱."],src:[S.ss_tofu,S.ss_iron]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"아몬드버터 바나나 팬케이크",ing:["almond","wheat","egg","banana"],iron:false,alg:"아몬드 2회차",algHow:"1/2작은술.",why:["아몬드 두 번째 + 밀 유지 섭취.","바나나로 단맛."],how:["통밀가루 3큰술 + 달걀 1개 + 으깬 바나나 1/2개로 반죽해 얇게 부쳐 스틱으로.","묽게 푼 아몬드버터를 얇게 발라요."],src:[S.ss_algmeal]},
+  {t:"점심 · 철분",name:"닭 허벅지살 완두 감자 매시 + 찐 브로콜리",ing:["chicken","pea","potato","broccoli"],iron:true,alg:null,why:["완두는 철분과 비타민 C를 동시에 가진 드문 채소(Solid Starts 완두+감자 조합).","닭 다리살 철분."],how:["완두콩을 푹 삶아 감자와 함께 곱게 으깨요(통 완두 절대 금지).","푹 삶아 찢은 닭 허벅지살을 섞어 숟가락에.","브로콜리 쪄서."],src:[S.ss_iron]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"아몬드버터 요거트 + 찐 사과 + 땅콩버터 토스트",ing:["almond","yogurt","apple","peanut","wheat"],iron:false,alg:"아몬드 3회차",algHow:"아몬드 마무리. 땅콩 유지.",why:["아몬드 도입 완료.","땅콩 주 2회 유지."],how:["요거트에 묽게 푼 아몬드버터를 섞고 찐 사과 웨지를 곁들여요.","통밀 팬케이크/무염 토스트 스틱에 묽은 땅콩버터를 얇게."],src:[S.ss_alg,S.ss_algmeal]},
+  {t:"점심 · 철분",name:"고등어 감자 완자 + 찐 무",ing:["mackerel","potato","radish","onion"],iron:true,alg:null,why:["고등어는 DHA·철분이 많은 국산 생선. 수은이 낮은 편(동갈삼치 제외).","무는 익숙한 채소, 푹 익히면 달아요."],how:["생물 고등어(자반 아님)를 구워 껍질·잔가시를 아주 꼼꼼히 제거하고 으깨요.","찐 감자·익힌 양파와 섞어 큰 완자로 구워요.","무는 손가락 굵기로 푹 쪄요."],src:[S.kr_fish,S.ss_salmon]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"캐슈버터 고구마 매시 + 키위",ing:["cashew","sweetpotato","kiwi"],iron:false,alg:"캐슈 1회차",algHow:"캐슈버터 1/4작은술 묽게 풀어 고구마 매시에.",why:["두 번째 견과 테스트. 캐슈는 철분·아연이 많아요.","키위는 비타민 C 최상위 과일."],how:["고구마 매시에 묽게 푼 캐슈버터 섞어요.","키위는 껍질 벗겨 웨지로(입 주위 붉어짐은 산 때문일 수 있어요)."],src:[S.ss_algmeal,S.ascia]},
+  {t:"점심 · 철분",name:"소고기 미역 완자 + 찐 배추",ing:["beef","seaweed","potato","napa"],iron:true,alg:null,why:["한국식 재료 미역을 완자에 — 요오드는 두뇌 발달에 필요해요(소량).","배추 속잎은 겨울 제철, 아주 부드러워요."],how:["미역 1작은술 분량을 불려 푹 끓인 뒤 곱게 다져요.","다진 소고기 50g + 찐 감자 30g + 다진 미역을 섞어 큰 완자로 구워요.","배추 노란 속잎을 푹 쪄서 돌돌 말아 스틱으로."],src:[S.ss_meatball,S.ss_iron]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"캐슈 소스 펜네 + 타히니 요거트",ing:["cashew","pasta","sesame","yogurt"],iron:false,alg:"캐슈 2회차",algHow:"1/2작은술. 참깨·밀 유지.",why:["캐슈 두 번째.","참깨·밀 유지 섭취를 한 끼에."],how:["무염 펜네를 푹 삶고 묽게 푼 캐슈버터 + 물로 소스를 만들어 버무려요.","타히니 요거트 곁들여요."],src:[S.ss_algmeal,S.ss_tahini]},
+  {t:"점심 · 철분",name:"양고기 스틱 + 렌틸 콜리플라워 매시",ing:["lamb","lentil","cauliflower"],iron:true,alg:null,why:["Nutrition Australia 철분 레시피(렌틸+콜리플라워)를 매시로.","양고기 헴철 추가."],how:["붉은 렌틸 1/2컵 + 콜리플라워 1/2컵을 물에 15분 끓여 되직하게 으깨요.","양고기 스틱 곁들여요."],src:[S.na_iron,S.nhs_lamb]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"캐슈버터 오트 팬케이크 + 홍시",ing:["cashew","oat","egg","persimmon"],iron:false,alg:"캐슈 3회차",algHow:"캐슈 마무리.",why:["캐슈 도입 완료.","홍시는 11월 한국 제철. 완숙이라 아주 부드러워요."],how:["귀리 간 것 3큰술 + 달걀 1개 + 분유 2큰술 반죽에 묽은 캐슈버터 1작은술을 섞어 부쳐 스틱으로.","홍시는 껍질 벗겨 숟가락에 얹거나 큰 웨지로."],src:[S.kr_oat,S.ss_alg]},
+  {t:"점심 · 철분",name:"소고기 스틱 + 찐 가지 + 감자",ing:["beef","eggplant","potato"],iron:true,alg:null,why:["소고기 헴철.","가지는 푹 익히면 잇몸으로 쉽게 으깨지는 새 채소."],how:["소고기 스틱(1일째).","가지 껍질 벗겨 손가락 굵기로 10분 쪄요. 감자 웨지도."],src:[S.ss_iron,S.ss_size]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"간 호두 요거트 + 찐 배",ing:["walnut","yogurt","pear"],iron:false,alg:"호두 1회차",algHow:"곱게 간 호두 1/4작은술을 요거트에. 조각 절대 금지.",why:["세 번째 견과. 호두는 오메가3가 많아요.","익숙한 요거트·배에 섞어 반응 구분."],how:["호두를 분쇄기로 가루처럼 곱게 갈아요.","요거트 2큰술에 1/4작은술 섞어 숟가락에. 배 웨지 곁들여요."],src:[S.ss_algmeal,S.ascia]},
+  {t:"점심 · 철분",name:"닭 허벅지살 스틱 + 두부 스틱 + 찐 당근",ing:["chicken","tofu","carrot"],iron:true,alg:null,why:["닭 다리살 + 두부 철분, 두부 유지 섭취."],how:["닭 허벅지살 푹 삶아 스틱, 두부 데쳐 스틱, 당근 쪄서 스틱 — 세 가지 스틱 플레이트."],src:[S.ss_tofu,S.ss_iron]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"호두 바나나 오트밀 + 땅콩버터",ing:["walnut","oat","banana","peanut"],iron:false,alg:"호두 2회차",algHow:"1/2작은술. 땅콩 유지.",why:["호두 두 번째 + 땅콩 유지."],how:["오트밀 포리지에 간 호두와 묽은 땅콩버터를 섞고 바나나 으깨 넣어요."],src:[S.ss_algmeal]},
+  {t:"점심 · 철분",name:"소간 파테 소고기 완자(2회차) + 찐 브로콜리",ing:["liver","beef","potato","broccoli"],iron:true,alg:null,why:["2주 만에 소간 두 번째(주 1~2회 한도 내).","브로콜리 비타민 C."],how:["9일째 냉동해 둔 파테 1작은술을 완자 반죽에 섞어 구워요.","브로콜리 쪄서."],src:[S.ss_liver]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"호두 가루 팬케이크 + 애플소스 + 대구 완자",ing:["walnut","wheat","egg","apple","cod"],iron:false,alg:"호두 3회차",algHow:"호두 마무리. 생선·밀 유지.",why:["호두 완료. 생선 주 2회 유지."],how:["통밀 팬케이크 반죽에 간 호두 1작은술을 섞어 부쳐 스틱으로. 애플소스 곁들여요.","냉동해 둔 대구 완자를 데워요."],src:[S.ss_alg,S.ss_salmon]},
+  {t:"점심 · 철분",name:"돼지고기 완자 + 비트 감자 매시",ing:["pork","potato","beet","onion"],iron:true,alg:null,why:["돼지고기 철분·B1.","비트 두 번째 경험."],how:["돼지고기 완자(7일째 방법).","비트·감자를 쪄서 함께 으깨 숟가락에."],src:[S.ss_meatball]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"잣가루 오트밀 + 으깬 귤",ing:["pinenut","oat","tangerine"],iron:false,alg:"잣 1회차",algHow:"곱게 간 잣 1/4작은술을 오트밀에.",why:["한국에서 흔한 견과 잣. 잣죽처럼 곱게 갈아 안전하게.","귤 비타민 C."],how:["잣을 분쇄기로 곱게 갈아 오트밀 포리지에 섞어요.","귤 속살을 으깨 올려요."],src:[S.ss_algmeal,S.ascia]},
+  {t:"점심 · 철분",name:"소고기 스틱 + 에다마메 매시 + 찐 단호박",ing:["beef","edamame","kabocha"],iron:true,alg:null,why:["두부를 통과했으니 같은 대두 가족 풋콩으로 질감 확장.","소고기 헴철 + 단호박 비타민 C."],how:["풋콩을 푹 삶아 껍질 벗기고 곱게 으깨요(통으로 금지).","소고기 스틱, 단호박 웨지 곁들여요."],src:[S.ss_algmeal,S.ss_iron]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"잣 두부 매시 + 찐 사과",ing:["pinenut","tofu","apple"],iron:false,alg:"잣 2회차",algHow:"1/2작은술. 두부 유지.",why:["잣 두 번째 + 두부 유지."],how:["두부를 데쳐 으깨고 잣가루를 섞어 숟가락에. 사과 웨지."],src:[S.ss_tofu]},
+  {t:"점심 · 철분",name:"연어 고구마 피시케이크 + 찐 그린빈",ing:["salmon","sweetpotato","greenbean"],iron:true,alg:null,why:["연어 DHA·철분 유지(주 2회).","고구마 비타민 C."],how:["찐 연어(껍질·가시 제거)와 찐 고구마를 1:1로 으깨 큰 패티로 구워요.","그린빈 쪄서."],src:[S.ss_salmon]}]},
+ {meals:[
+  {t:"아침 · 알러젠",name:"잣 팬케이크 + 타히니 바나나",ing:["pinenut","wheat","egg","sesame","banana"],iron:false,alg:"잣 3회차",algHow:"잣 마무리. 참깨·밀 유지.",why:["잣 완료. 지금까지 땅콩·밀·참깨·대두·생선·아몬드·캐슈·호두·잣을 확인했어요."],how:["통밀 팬케이크 반죽에 잣가루를 섞어 부쳐 스틱으로.","바나나에 묽은 타히니를 얇게 발라요."],src:[S.ss_alg,S.ss_tahini]},
+  {t:"점심 · 철분",name:"소고기 토마토 렌틸 스튜 + 밥전",ing:["beef","tomato","lentil","onion","rice","sorghum","laver"],iron:true,alg:null,why:["소고기 헴철 + 렌틸 식물성 철분 + 토마토 비타민 C — 이번 달 가장 철분 밀도 높은 끼니.","수수밥전에 무염 김을 부숴 넣어 새로운 맛."],how:["다진 소고기·양파를 볶고 토마토·렌틸·물 1컵을 넣어 25분 뭉근히 끓여 되직하게.","밥전은 13일째 방법에 구운 무염 김을 잘게 부숴 섞어요(통김 금지)."],src:[S.ss_bolo,S.ss_lentil,S.kr_rice]}]},
+ {meals:[
+  {t:"아침 · 알러젠(선택)",name:"새우 감자 매시 (소아과 상담 후) 또는 땅콩버터 오트밀",ing:["shrimp","potato","peanut","oat"],iron:false,alg:"새우 1회차 (선택)",algHow:"해외 지침은 6개월부터 가능, 국내는 돌 이후 권고도 있어 의견이 갈려요. 소아과에서 괜찮다고 하면 완전히 익혀 아주 잘게 다진 새우 1작은술을 감자 매시에. 아니면 땅콩버터 오트밀로 대체.",why:["갑각류 알러젠. 꼭 확인하고 싶다면 소아과 상담 후 진행.","대체 메뉴: 땅콩 유지 섭취."],how:["(새우) 껍질·내장 제거 후 완전히 익혀 아주 곱게 다져 감자 매시에 1작은술 섞어요. 동그란 조각 절대 금지.","(대체) 오트밀 포리지 + 묽은 땅콩버터."],src:[S.ss_shrimp,S.kr_alg,S.kr_early]},
+  {t:"점심 · 철분",name:"양고기 스틱 + 들깨가루 단호박 매시",ing:["lamb","perilla","kabocha"],iron:true,alg:null,why:["들깨는 한국식 오메가3·칼슘 공급원. 참깨와 다른 식물이라 별도 알러젠은 아니에요.","양고기 헴철."],how:["단호박 매시에 들깨가루 1/2작은술 섞어요.","양고기 스틱 곁들여요."],src:[S.nhs_lamb,S.ss_iron]}]},
+ {meals:[
+  {t:"아침 · 알러젠(선택)",name:"새우 패티(선택) 또는 아몬드버터 리코타 매시 + 망고",ing:["shrimp","potato","almond","ricotta","mango"],iron:false,alg:"새우 2회차 (선택)",algHow:"어제 새우를 줬고 괜찮았다면 2배. 아니면 아몬드 유지.",why:["새우 2회차 또는 아몬드 유지.","리코타는 요거트 다음 유제품 경험 — 짜지 않은 치즈만.","망고는 새로운 열대 과일 경험."],how:["(새우) 곱게 다진 새우 + 찐 감자로 큰 패티. (대체) 리코타 2큰술에 묽은 아몬드버터를 섞어 숟가락에.","망고는 잘 익은 것을 긴 웨지로(미끄러우면 오트가루)."],src:[S.ss_shrimp,S.ss_algmeal]},
+  {t:"점심 · 철분",name:"닭 허벅지살 미역 완자 + 찐 양배추",ing:["chicken","seaweed","potato","cabbage"],iron:true,alg:null,why:["미역 두 번째(소량). 닭 다리살 철분."],how:["다진 닭 허벅지살 50g + 찐 감자 + 곱게 다진 미역 1작은술로 완자 구워요.","양배추 롤 쪄서."],src:[S.ss_meatball]}]},
+ {meals:[
+  {t:"아침 · 알러젠(선택)",name:"새우 3회차(선택) 또는 캐슈버터 토스트 + 블루베리",ing:["shrimp","wheat","cashew","blueberry"],iron:false,alg:"새우 3회차 (선택)",algHow:"새우 마무리 또는 캐슈·밀 유지.",why:["30일 알러젠 일정 마무리."],how:["(새우) 새우 패티. (대체) 통밀 팬케이크 스틱 + 묽은 캐슈버터.","블루베리 으깨 곁들여요."],src:[S.ss_shrimp,S.ss_algmeal]},
+  {t:"점심 · 철분",name:"30일 마무리: 소고기 스틱 + 밤 고구마 매시 + 찐 브로콜리",ing:["beef","chestnut","sweetpotato","broccoli"],iron:true,alg:null,why:["가을 제철 밤을 곱게 으깨서 — 통밤은 질식 위험이라 반드시 매시로.","소고기 헴철 + 브로콜리 비타민 C."],how:["밤을 푹 삶아 속살만 곱게 으깨 찐 고구마와 섞어요.","소고기 스틱, 브로콜리 곁들여요."],tip:"다음 30일 식단이 필요하면 기록 탭의 메모와 함께 다시 요청해 주세요. 잘 먹은 것·반응 있었던 것을 반영해 짜 드릴게요.",src:[S.ss_iron,S.ss_size]}]}
+];
+
+const ALG_SUMMARY=`<b>이 식단의 알러젠 테스트 원칙</b><ul>
+<li>한 번에 한 가지, 아침(오전)에, 소량(1/4작은술)부터 시작해 3일 연속 늘려가며 줍니다. 3회째까지 괜찮으면 도입 완료.</li>
+<li>새 알러젠은 3일 간격으로 넣었어요. 해외 지침(Solid Starts·ASCIA)은 간격이 필수는 아니라고 하지만, 국내에서 흔한 3일 기준을 따랐어요.</li>
+<li>도입이 끝난 알러젠은 주 2회 정도 계속 줍니다(2주 이상 끊기면 다시 소량부터).</li>
+<li>감기·예방접종 당일은 새 알러젠을 하루 미루고, 그날은 이미 먹어본 재료로 대체하세요.</li>
+<li>입 주위만 살짝 붉어지는 건 대개 산·마찰 때문. 두드러기·구토·얼굴 부종은 중단 후 소아과, 호흡곤란·축 처짐은 119.</li>
+<li>순서: 땅콩 → 밀 → 참깨 → 대두 → 생선 → 아몬드 → 캐슈 → 호두 → 잣 → (선택) 새우. 달걀·요거트는 이미 완료.</li>
+<li>습진이 있거나 가족력이 있으면 일정을 소아과와 먼저 상의하세요.</li></ul>
+<p style="margin:6px 0 0;font-size:13px;color:var(--muted)">출처: <a href="${S.ss_alg.u}" target="_blank" rel="noopener">${S.ss_alg.n}</a> · <a href="${S.ascia.u}" target="_blank" rel="noopener">${S.ascia.n}</a> · <a href="${S.kr_alg.u}" target="_blank" rel="noopener">${S.kr_alg.n}</a> · <a href="${S.kr_yuga.u}" target="_blank" rel="noopener">${S.kr_yuga.n}</a> · <a href="${S.kr_early.u}" target="_blank" rel="noopener">${S.kr_early.n}</a></p>`;
+
+const GUIDE=`
+<h3>이 식단이 지키는 것</h3>
+<ul>
+<li><b>하루 두 끼, 한 끼는 철분 집중.</b> 6개월부터 아기의 철분 필요량이 크게 늘어요(미국 기준 하루 11mg). 소고기·양고기·닭 다리살·돼지고기·소간·렌틸·병아리콩·두부·달걀노른자를 돌려가며 넣고, 비타민 C 채소(브로콜리·파프리카·토마토·고구마)와 짝지어 흡수를 높였어요.</li>
+<li><b>이가 없어도 되는 형태.</b> 고기는 쪽쪽 빨 수 있는 긴 스틱, 아니면 감자·두부로 부드럽게 뭉친 큰 완자·패티. 작게 부순 다짐육은 절대 그냥 주지 않아요.</li>
+<li><b>크기와 모양.</b> 어른 손가락 두 개 굵기, 주먹 밖으로 끝이 나오는 길이. 포크로 살짝 눌러 들어갈 만큼 부드럽게. 동그랗고 미끄러운 것(통 완두·블루베리·방울토마토·통견과)은 으깨거나 금지.</li>
+<li><b>새 재료 48가지.</b> 재료 사전에서 초록 테두리 칩이 새 재료예요.</li>
+<li><b>다양한 출처.</b> NHS Start for Life, Solid Starts, ASCIA(호주 알레르기학회), Nutrition Australia, 식약처·아주대병원 국내 자료, 만개의레시피·육아크루·타리 등을 조합했어요. 각 끼니 아래에 참고 링크가 있어요.</li>
+</ul>
+<h3>절대 주지 않는 것</h3>
+<ul>
+<li><b>꿀</b> (돌 전 보툴리누스 위험, 가열해도 안 됨 — 식약처). 꿀이 들어간 땅콩버터·시리얼도 확인.</li>
+<li><b>소금·설탕·간장·치즈(일반)·자반·훈제·시판 빵.</b> 조리에 소금을 넣지 않고 무염 제품만.</li>
+<li><b>생우유를 음료로.</b> 요리에 소량은 괜찮지만 마시는 건 돌 이후. 쌀음료도 금지.</li>
+<li><b>통견과·통깨·통포도·방울토마토·팝콘·젤리.</b> 질식 위험.</li>
+<li><b>상어·황새치·동갈삼치·옥돔</b> 등 수은 높은 생선. 대구·연어·고등어는 괜찮아요.</li>
+<li><b>반숙 달걀, 덜 익은 고기·생선·새우.</b> 완전히 익혀서.</li>
+</ul>
+<h3>매 끼 기억할 것</h3>
+<ul>
+<li>아기가 똑바로 앉은 상태에서, 팔 닿는 거리에서 지켜보기.</li>
+<li>구역질(gagging)은 정상적인 배움이에요. 소리가 나지 않고 얼굴이 파래지면 질식 — 평소에 영아 하임리히법을 익혀 두세요.</li>
+<li>안 먹어도 괜찮아요. 6~7개월엔 모유·분유가 주식이고, 고형식은 탐색이 목적이에요.</li>
+<li>같은 재료를 여러 번 보여 줘야 받아들여요. 거부해도 며칠 뒤 다시.</li>
+</ul>
+<h3>시간 절약 팁</h3>
+<ul>
+<li>소고기·돼지고기 완자, 고구마 병아리콩 패티, 대구 완자, 소간 파테(1작은술 단위)는 한 번에 많이 만들어 냉동하면 한 달 내내 써요.</li>
+<li>스틱 채소(당근·고구마·단호박·브로콜리)는 2~3일분을 한 번에 쪄 두세요.</li>
+<li>어른 식사에서 소금 넣기 전 아기 몫을 먼저 덜어내면 따로 요리할 일이 줄어요.</li>
+</ul>
+<p style="font-size:13px;color:var(--muted)">출처: <a href="${S.nhs_avoid.u}" target="_blank" rel="noopener">${S.nhs_avoid.n}</a> · <a href="${S.ss_size.u}" target="_blank" rel="noopener">${S.ss_size.n}</a> · <a href="${S.ss_iron.u}" target="_blank" rel="noopener">${S.ss_iron.n}</a> · <a href="${S.kr_honey.u}" target="_blank" rel="noopener">${S.kr_honey.n}</a> · <a href="${S.kr_salt.u}" target="_blank" rel="noopener">${S.kr_salt.n}</a> · <a href="${S.kr_fish.u}" target="_blank" rel="noopener">${S.kr_fish.n}</a> · <a href="${S.kr_iron.u}" target="_blank" rel="noopener">${S.kr_iron.n}</a></p>
+<p style="font-size:13px;color:var(--muted)">이 식단은 일반적인 공개 가이드를 바탕으로 짠 참고 자료예요. 아기의 건강 상태에 따라 소아과 선생님의 조언이 우선합니다.</p>`;
+
+</script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const pad=n=>String(n).padStart(2,'0');
+  const start=new Date(START+'T00:00:00');
+  const dateOf=i=>{const d=new Date(start);d.setDate(d.getDate()+i);return d;};
+  const fmt=d=>`${d.getMonth()+1}/${d.getDate()} (${'일월화수목금토'[d.getDay()]})`;
+  const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const today=new Date(); today.setHours(0,0,0,0);
+  let todayIdx=Math.round((today-start)/86400000); if(todayIdx<0)todayIdx=0; if(todayIdx>29)todayIdx=29;
+  let cur=todayIdx;
+  const EAT=['안 먹음','조금 맛봄','절반','잘 먹음'];
+  const REACT=['이상 없음','입 주위 붉어짐','피부 발진','구토·설사','기타(메모)'];
+  let logs={}; // key dNN -> {m0:{eat,react,note},m1:{...}}
+
+  // ---------- storage (Firebase Firestore + localStorage fallback) ----------
+  const LS='blw-logs-v1';
+  function lsRead(){try{return JSON.parse(localStorage.getItem(LS)||'{}')}catch(e){return {}}}
+  function lsWrite(){try{localStorage.setItem(LS,JSON.stringify(logs))}catch(e){}}
+  firebase.initializeApp(FIREBASE_CONFIG);
+  const auth=firebase.auth(); const store=firebase.firestore();
+  let user=null, unsub=null;
+  function initStore(){
+    logs=lsRead(); renderAll();
+    const bar=$('#authbar');
+    auth.onAuthStateChanged(u=>{
+      user=u; if(unsub){unsub();unsub=null;}
+      if(u){
+        bar.innerHTML=`<span class="status">${u.email} 로 로그인됨</span><button class="opt" id="logout">로그아웃</button>`;
+        $('#logout').onclick=()=>auth.signOut();
+        $('#storeinfo').textContent='클라우드 기록 불러오는 중…';
+        unsub=store.collection('logs').onSnapshot(snap=>{
+          const next={...logs}; snap.forEach(d=>{ next[d.id]=d.data(); });
+          logs=next; lsWrite(); renderAll();
+          $('#storeinfo').textContent='클라우드에 저장됨 · 어느 기기에서나 같은 기록이 보여요.';
+        },err=>{ $('#storeinfo').textContent='클라우드 읽기 실패 ('+err.code+'). Firebase 보안 규칙과 로그인 이메일을 확인해 주세요.'; });
+      }else{
+        bar.innerHTML=`<button class="btn" id="login">구글로 로그인</button><span class="status">로그인하면 기록이 클라우드에 저장돼요</span>`;
+        $('#login').onclick=()=>{ const p=new firebase.auth.GoogleAuthProvider();
+          auth.signInWithPopup(p).catch(e=>{ if(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment')auth.signInWithRedirect(p); else $('#storeinfo').textContent='로그인 실패: '+e.code; }); };
+        $('#storeinfo').textContent='로그인 전에는 이 기기에만 저장돼요.';
+      }
+    });
+  }
+  async function saveDay(key,data,statusEl){
+    logs[key]=data; lsWrite();
+    statusEl.textContent='저장 중…';
+    if(user){
+      try{ await store.collection('logs').doc(key).set(data); statusEl.textContent='저장됐어요 ✓'; }
+      catch(e){ statusEl.textContent='이 기기에는 저장됐지만 클라우드 저장은 실패했어요 ('+e.code+').'; }
+    } else statusEl.textContent='이 기기에 저장됐어요 ✓ (로그인하면 클라우드에도 저장)';
+    renderStrip(); renderStats(); renderLogList();
+  }
+
+  // ---------- helpers ----------
+  const known=new Set(KNOWN);
+  const allIng=new Set(); PLAN.forEach(d=>d.meals.forEach(m=>m.ing.forEach(i=>allIng.add(i))));
+  const newIngs=[...allIng].filter(i=>!known.has(i));
+  const firstSeen={}; PLAN.forEach((d,di)=>d.meals.forEach(m=>m.ing.forEach(i=>{ if(!(i in firstSeen))firstSeen[i]=di; })));
+  function ingName(k){return ING[k]?ING[k].name:k}
+
+  function showIng(k){
+    const g=ING[k]; if(!g)return;
+    const nut=g.nut.join(' · ');
+    $('#dlgbody').innerHTML=`<h4>${g.name}</h4>
+      <p style="margin:0 0 6px"><span class="nut" style="color:var(--iron);font-weight:500;font-size:13px">${nut}</span></p>
+      <p style="margin:0 0 6px"><b>왜 넣었나요?</b> ${g.why}</p>
+      <p style="margin:0 0 6px;color:var(--muted)"><b>주는 방법</b> ${g.form}</p>
+      ${g.cau?`<p style="margin:0;color:var(--warn)"><b>주의</b> ${g.cau}</p>`:''}
+      ${known.has(k)?'<p style="margin:6px 0 0;font-size:13px;color:var(--muted)">이미 먹어본 재료예요.</p>':`<p style="margin:6px 0 0;font-size:13px;color:var(--new)">새 재료 · 식단 ${firstSeen[k]+1}일째 처음 등장</p>`}`;
+    $('#dlg').showModal();
+  }
+  window.showIng=showIng;
+
+  // ---------- render ----------
+  function renderStats(){
+    $('#st-day').textContent=`${todayIdx+1} / 30일째`;
+    $('#st-age').textContent=`${DAY_AT_START+todayIdx}일`;
+    $('#st-new').textContent=`${newIngs.length}가지`;
+    let n=0; Object.values(logs).forEach(d=>{['m0','m1'].forEach(k=>{ if(d[k]&&(d[k].eat!=null||d[k].note))n++; })});
+    $('#st-logged').textContent=`${n} / 60`;
+    $('#subline').textContent=`자기주도이유식 · 하루 두 끼 · 한 끼는 철분 집중 · ${fmt(dateOf(0))}부터 ${fmt(dateOf(29))}까지`;
+  }
+  function renderStrip(){
+    const s=$('#strip'); s.innerHTML='';
+    PLAN.forEach((d,i)=>{
+      const b=document.createElement('button'); const dt=dateOf(i);
+      b.innerHTML=`<small>${dt.getMonth()+1}/${dt.getDate()}</small><b>${i+1}일</b>`;
+      b.setAttribute('aria-current',i===cur?'true':'false');
+      if(i===todayIdx)b.classList.add('today');
+      const L=logs['d'+pad(i+1)]; if(L&&((L.m0&&L.m0.eat!=null)||(L.m1&&L.m1.eat!=null)))b.classList.add('done');
+      b.onclick=()=>{cur=i;renderStrip();renderDay();};
+      s.appendChild(b);
+    });
+    const act=s.querySelector('[aria-current="true"]'); if(act)act.scrollIntoView({inline:'center',block:'nearest'});
+  }
+  function renderDay(){
+    const d=PLAN[cur]; const key='d'+pad(cur+1); const L=logs[key]||{};
+    const dt=dateOf(cur);
+    let h=`<div class="dayhead"><h2>${cur+1}일째 · ${fmt(dt)}</h2><span class="age">생후 ${DAY_AT_START+cur}일</span></div>`;
+    if(d.note)h+=`<div class="note">${d.note}</div>`;
+    d.meals.forEach((m,mi)=>{
+      const lg=L['m'+mi]||{};
+      const newHere=m.ing.filter(i=>firstSeen[i]===cur&&!known.has(i));
+      h+=`<article class="meal" id="meal-${mi}">
+        <div class="when">${m.t}</div><h3>${m.name}</h3>
+        <div class="tags">${m.iron?'<span class="tag iron">철분 집중 끼니</span>':''}${m.alg?`<span class="tag alg">알러젠 테스트 · ${m.alg}</span>`:''}${newHere.length?`<span class="tag new">새 재료 ${newHere.map(ingName).join(', ')}</span>`:''}</div>
+        <div class="chips">${m.ing.map(i=>`<button class="chip ${known.has(i)?'':'isnew'}" onclick="showIng('${i}')">${ingName(i)}</button>`).join('')}</div>
+        <div class="sec why"><h4>왜 이 재료인가요?</h4><ul style="margin:0;padding-left:18px">${m.why.map(w=>`<li>${w}</li>`).join('')}</ul></div>
+        <div class="sec"><h4>만드는 법</h4><ol>${m.how.map(s=>`<li>${s}</li>`).join('')}</ol></div>
+        ${m.tip?`<div class="sec"><h4>주는 방법 · 팁</h4><p>${m.tip}</p></div>`:''}
+        <div class="sec src"><h4>참고한 출처</h4>${m.src.map(s=>`<a href="${s.u}" target="_blank" rel="noopener">${s.n}</a>`).join(' · ')}</div>
+        <div class="track">
+          <div class="row"><label>얼마나 먹었나요?</label>${EAT.map((e,i)=>`<button class="opt" data-k="eat" data-v="${i}" aria-pressed="${lg.eat===i}">${e}</button>`).join('')}</div>
+          <div class="row"><label>반응은요?</label>${REACT.map((e,i)=>`<button class="opt" data-k="react" data-v="${i}" aria-pressed="${lg.react===i}">${e}</button>`).join('')}</div>
+          <label for="note-${key}-${mi}" style="font-size:13px;color:var(--muted)">메모</label>
+          <textarea id="note-${key}-${mi}" placeholder="예: 소고기 스틱을 한참 빨았어요. 고구마는 손으로 뭉갰어요.">${lg.note||''}</textarea>
+          <div class="saveline"><button class="btn" data-save="${mi}">저장</button><span class="status" id="status-${mi}"></span></div>
+        </div>
+      </article>`;
+    });
+    $('#day').innerHTML=h;
+    // interactions
+    $('#day').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
+      const row=b.parentElement; const was=b.getAttribute('aria-pressed')==='true';
+      row.querySelectorAll('.opt').forEach(x=>x.setAttribute('aria-pressed','false'));
+      if(!was)b.setAttribute('aria-pressed','true');
+    });
+    $('#day').querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>{
+      const mi=+b.dataset.save; const art=$('#meal-'+mi);
+      const pick=k=>{const x=art.querySelector(`.opt[data-k="${k}"][aria-pressed="true"]`);return x?+x.dataset.v:null;};
+      const data={...(logs[key]||{})};
+      data['m'+mi]={eat:pick('eat'),react:pick('react'),note:art.querySelector('textarea').value.trim(),at:new Date().toISOString()};
+      data.date=iso(dt);
+      saveDay(key,data,$('#status-'+mi));
+    });
+    window.scrollTo({top:0,behavior:'auto'});
+  }
+  function renderDict(filter){
+    const groups=[...new Set(Object.values(ING).map(g=>g.group))];
+    const f=$('#dictfilter'); f.innerHTML=['전체','새 재료만',...groups].map(g=>`<button class="opt" aria-pressed="${(filter||'전체')===g}" data-g="${g}">${g}</button>`).join('');
+    f.querySelectorAll('.opt').forEach(b=>b.onclick=()=>renderDict(b.dataset.g));
+    const box=$('#dict'); box.innerHTML='';
+    Object.entries(ING).filter(([k,g])=>!filter||filter==='전체'||(filter==='새 재료만'?!known.has(k):g.group===filter)).forEach(([k,g])=>{
+      const el=document.createElement('div'); el.className='ing'+(known.has(k)?' known':'');
+      el.innerHTML=`<h4>${g.name}</h4><div class="nut">${g.nut.join(' · ')}</div><p>${g.why}</p><p class="form">${g.form}</p>${g.cau?`<p class="cau">⚠ ${g.cau}</p>`:''}${!known.has(k)&&firstSeen[k]!=null?`<p class="form">처음: 식단 ${firstSeen[k]+1}일째</p>`:''}`;
+      box.appendChild(el);
+    });
+  }
+  function renderAlg(){
+    const rows=[]; PLAN.forEach((d,i)=>d.meals.forEach(m=>{ if(m.alg)rows.push({i,m}); }));
+    $('#algtable').innerHTML=`<thead><tr><th>날짜</th><th>알러젠</th><th>어떻게</th><th>이후</th></tr></thead><tbody>`+
+      rows.map(r=>`<tr><td><b>${r.i+1}일째</b><br><span style="color:var(--muted);font-size:13px">${fmt(dateOf(r.i))}</span></td><td><b>${r.m.alg}</b></td><td>${r.m.algHow||''}</td><td style="font-size:13px">${r.m.algAfter||'반응 없으면 이후 주 2회 정도 계속 주세요.'}</td></tr>`).join('')+`</tbody>`;
+    $('#algsum').innerHTML=ALG_SUMMARY;
+  }
+  function renderGuide(){ $('#panel-guide').innerHTML=GUIDE; }
+  function renderLogList(){
+    const box=$('#loglist'); const keys=Object.keys(logs).sort(); let h='';
+    keys.forEach(k=>{ const i=+k.slice(1)-1; const d=PLAN[i]; if(!d)return; const L=logs[k];
+      ['m0','m1'].forEach((mk,mi)=>{ const x=L[mk]; if(!x||(x.eat==null&&x.react==null&&!x.note))return;
+        h+=`<div class="meal" style="padding:12px 14px"><div class="when">${i+1}일째 · ${fmt(dateOf(i))} · ${d.meals[mi].t}</div><b style="font-weight:500">${d.meals[mi].name}</b><div style="font-size:14px;margin-top:4px">${x.eat!=null?'🍽 '+EAT[x.eat]:''} ${x.react!=null?' · '+REACT[x.react]:''}</div>${x.note?`<p style="margin:4px 0 0;font-size:14px;color:var(--muted)">${x.note.replace(/</g,'&lt;')}</p>`:''}</div>`; });
+    });
+    box.innerHTML=h||'<p class="sub">아직 저장한 기록이 없어요. 식단 탭의 각 끼니 아래에서 기록할 수 있어요.</p>';
+  }
+  function renderAll(){ renderStats(); renderStrip(); renderDay(); renderLogList(); }
+
+  // tabs
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('nav.tabs button').forEach(x=>x.setAttribute('aria-selected','false')); b.setAttribute('aria-selected','true');
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on')); $('#panel-'+b.dataset.tab).classList.add('on');
+  });
+
+  renderDict(); renderAlg(); renderGuide();
+  initStore();
+})();
+</script>
+
+</body>
+</html>
