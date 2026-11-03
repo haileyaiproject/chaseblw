@@ -116,6 +116,25 @@ dialog h4{margin:0 0 6px;font-family:var(--display);font-weight:400;font-size:20
 dialog .close{margin-top:12px}
 .summary{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:12px;font-size:14px}
 .summary ul{margin:4px 0 0;padding-left:18px}
+/* calendar */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;min-width:640px}
+.calw{overflow-x:auto;margin-top:12px}
+.cal .dow{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:center;padding:4px 0}
+.cal .dow.sun,.cal .d.sun .dn{color:var(--iron)}
+.cal .d{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px;min-height:92px;font-size:11.5px;line-height:1.35;cursor:pointer;text-align:left;font-family:var(--body);color:var(--fg)}
+.cal .d.empty{background:transparent;border-color:transparent;cursor:default}
+.cal .d.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.cal .d:hover:not(.empty),.cal .d:focus-visible{border-color:var(--accent);outline:none}
+.cal .dn{font-weight:500;font-size:13px;font-variant-numeric:tabular-nums;display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.cal .ab{font-size:10px;background:var(--alg-soft);color:var(--alg);border-radius:999px;padding:1px 6px;font-weight:500;white-space:nowrap}
+.cal .m{margin:2px 0;display:flex;gap:3px;align-items:flex-start}
+.cal .m i{font-style:normal;flex:0 0 auto;width:6px;height:6px;border-radius:50%;margin-top:5px;background:var(--line)}
+.cal .m.iron i{background:var(--iron)}
+.cal .m span{min-width:0}
+.cal .d.logged .dn::after{content:"✓";color:var(--new);font-size:11px}
+.calh{font-family:var(--display);font-weight:400;font-size:20px;margin:16px 0 6px}
+.callegend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.callegend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
 @media (prefers-reduced-motion:no-preference){.meal{transition:box-shadow .2s}.meal:hover{box-shadow:0 2px 10px rgba(0,0,0,.06)}}
 </style>
 </head>
@@ -148,6 +167,7 @@ const FIREBASE_CONFIG={
     </div>
     <nav class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-tab="plan">식단</button>
+      <button role="tab" aria-selected="false" data-tab="cal">달력</button>
       <button role="tab" aria-selected="false" data-tab="dict">재료 사전</button>
       <button role="tab" aria-selected="false" data-tab="alg">알러젠 계획</button>
       <button role="tab" aria-selected="false" data-tab="guide">안전 가이드</button>
@@ -159,6 +179,11 @@ const FIREBASE_CONFIG={
     <p class="status" id="storeinfo" style="margin:8px 0 0">기록 저장 상태 확인 중…</p>
     <div class="strip" id="strip"></div>
     <div id="day"></div>
+  </section>
+
+  <section class="panel" id="panel-cal">
+    <p class="sub">한눈에 보는 30일. 칸을 누르면 그날 식단으로 이동해요. 빨간 점은 철분 집중 끼니, 파란 표시는 알러젠 테스트, ✓는 기록한 날이에요.</p>
+    <div id="cal"></div>
   </section>
 
   <section class="panel" id="panel-dict">
@@ -505,7 +530,29 @@ const GUIDE=`
     });
     box.innerHTML=h||'<p class="sub">아직 저장한 기록이 없어요. 식단 탭의 각 끼니 아래에서 기록할 수 있어요.</p>';
   }
-  function renderAll(){ renderStats(); renderStrip(); renderDay(); renderLogList(); }
+  function renderCal(){
+    const box=$('#cal'); let h='';
+    const months=[...new Set(PLAN.map((_,i)=>{const d=dateOf(i);return d.getFullYear()*100+d.getMonth();}))];
+    months.forEach(ym=>{
+      const y=Math.floor(ym/100), mo=ym%100;
+      h+=`<div class="calh">${y}년 ${mo+1}월</div><div class="calw"><div class="cal">`+['일','월','화','수','목','금','토'].map((w,i)=>`<div class="dow ${i===0?'sun':''}">${w}</div>`).join('');
+      const first=new Date(y,mo,1); const last=new Date(y,mo+1,0);
+      for(let i=0;i<first.getDay();i++)h+='<div class="d empty"></div>';
+      for(let day=1;day<=last.getDate();day++){
+        const dt=new Date(y,mo,day); const idx=Math.round((dt-start)/86400000);
+        if(idx<0||idx>29){h+=`<div class="d empty"><div class="dn" style="color:var(--muted)">${day}</div></div>`;continue;}
+        const d=PLAN[idx]; const L=logs['d'+pad(idx+1)]; const logged=L&&((L.m0&&L.m0.eat!=null)||(L.m1&&L.m1.eat!=null));
+        const alg=d.meals.find(m=>m.alg);
+        h+=`<button class="d ${dt.getDay()===0?'sun':''} ${idx===todayIdx?'today':''} ${logged?'logged':''}" data-idx="${idx}"><div class="dn"><span>${day}</span>${alg?`<span class="ab">${alg.alg.replace(' (선택)','')}</span>`:''}</div>`+
+          d.meals.map(m=>`<div class="m ${m.iron?'iron':''}"><i></i><span>${m.name.replace(/\(.*?\)/g,'').replace(/ 또는 .*/,'')}</span></div>`).join('')+`</button>`;
+      }
+      h+='</div></div>';
+    });
+    h+='<div class="callegend"><span><i style="background:var(--iron)"></i>철분 집중 끼니</span><span><i style="background:var(--line)"></i>일반 끼니</span><span><span class="ab" style="font-size:11px">땅콩 1회차</span> 알러젠 테스트</span></div>';
+    box.innerHTML=h;
+    box.querySelectorAll('.d[data-idx]').forEach(b=>b.onclick=()=>{cur=+b.dataset.idx;renderStrip();renderDay();document.querySelector('nav.tabs button[data-tab="plan"]').click();});
+  }
+  function renderAll(){ renderStats(); renderStrip(); renderDay(); renderLogList(); renderCal(); }
 
   // tabs
   document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
